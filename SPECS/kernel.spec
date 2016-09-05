@@ -14,7 +14,9 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.28.2.el7
 
-%define pkg_release %{pkgrelease}%{?buildid}
+%define wwpbuild 2
+%define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
+%define pkg_release %{pkgrelease_local}%{?buildid}
 
 # The kernel tarball/base version
 %define rheltarball %{rpmversion}-%{pkgrelease}
