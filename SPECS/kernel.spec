@@ -17,6 +17,7 @@ Summary: The Linux kernel
 %define wwpbuild 2
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
+%global run_oldconfig 0
 
 # The kernel tarball/base version
 %define rheltarball %{rpmversion}-%{pkgrelease}
@@ -747,9 +748,13 @@ do
   fi
 %endif
   rm -f .newoptions
+%if %{run_oldconfig}
   make %{?cross_opts} ARCH=$Arch oldnoconfig
   echo "# $Arch" > configs/$i
   cat .config >> configs/$i
+%else
+  cp .config configs/$i
+%endif
 done
 # end of kernel config
 %endif
@@ -832,7 +837,9 @@ BuildKernel() {
     fi
 %endif
 
+%if %{run_oldconfig}
     make -s %{?cross_opts} ARCH=$Arch oldnoconfig >/dev/null
+%endif
     make -s %{?cross_opts} ARCH=$Arch V=1 %{?_smp_mflags} KCFLAGS="%{?kcflags}" WITH_GCOV="%{?with_gcov}" $MakeTarget %{?sparse_mflags}
 
     if [ "$Flavour" != "kdump" ]; then
