@@ -1,4 +1,4 @@
-This is a RHEL7 kernel src.rpm with configs and bonus patches to enable additional functionality on Soekris net6501 hardware.
+This is a CentOS 7 kernel src.rpm with configs and bonus patches to enable additional functionality on Soekris net6501 hardware.
 
 Right now, the patches are:
   * `e6xx-force-hpet.patch`: Force-enable the high-precision event timer on E6xx systems that don't support ACPI (unknown origin)
