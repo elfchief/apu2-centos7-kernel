@@ -59,7 +59,7 @@ diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/gpio/Makefi
 diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/gpio/gpio-ioport.c linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.progress/drivers/gpio/gpio-ioport.c
 --- linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/gpio/gpio-ioport.c	1969-12-31 16:00:00.000000000 -0800
 +++ linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.progress/drivers/gpio/gpio-ioport.c	2016-09-05 18:28:48.997066569 -0700
-@@ -0,0 +1,555 @@
+@@ -0,0 +1,553 @@
 +/*
 + * Generic driver for ioport-mapped GPIO controllers.
 + *
@@ -89,8 +89,6 @@ diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/gpio/gpio-i
 + *
 + * This module could probably be somewhat trivially merged with 
 + * gpio-generic if that was desirable.
-+ *
-+ * Map your ioports with ioport_map before porting this at 'em
 + */
 +
 +// FIXME: Probably don't need all these
@@ -612,8 +610,8 @@ diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/gpio/gpio-i
 +
 +#endif /* CONFIG_GPIO_GENERIC_PLATFORM_IOPORT */
 +
-+MODULE_DESCRIPTION("Driver for basic memory-mapped GPIO controllers");
-+MODULE_AUTHOR("Anton Vorontsov <cbouatmailru@gmail.com>");
++MODULE_DESCRIPTION("Driver for basic ioport-mapped GPIO controllers");
++MODULE_AUTHOR("J. Grizzard <jg-github@lupine.org>");
 +MODULE_LICENSE("GPL");
 diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/leds/Kconfig linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.progress/drivers/leds/Kconfig
 --- linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/leds/Kconfig	2016-06-27 02:03:38.000000000 -0700
@@ -1001,7 +999,7 @@ diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/platform/x8
 +    platform_device_unregister(leds_device);
 +}
 +
-+/* Don't -think- we need anything here */
++/* I don't -think- we need anything here */
 +static void net6501_release(struct device *dev)
 +{
 +    return;
@@ -1010,18 +1008,18 @@ diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/drivers/platform/x8
 +module_init(net6501_init);
 +module_exit(net6501_exit);
 +
-+MODULE_AUTHOR("someone <someone@example.com>");
-+MODULE_DESCRIPTION("Soekris net6501 System Setup");
++MODULE_AUTHOR("J. Grizzard <jg-github@lupine.org>");
++MODULE_DESCRIPTION("Soekris net6501 platform device setup");
 +MODULE_LICENSE("GPL");
 diff -Naur linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/include/linux/basic_ioport_gpio.h linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.progress/include/linux/basic_ioport_gpio.h
 --- linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.orig/include/linux/basic_ioport_gpio.h	1969-12-31 16:00:00.000000000 -0800
 +++ linux-3.10.0-327.28.2.el7.wwp_soekris.x86_64.progress/include/linux/basic_ioport_gpio.h	2016-09-04 12:47:46.976011035 -0700
 @@ -0,0 +1,77 @@
 +/*
-+ * Basic ioport-mapped GPIO controllers.
++ * Basic ioport-mapped GPIO controllers. HEAVILY based on basic_mmio_gpio.h
 + *
-+ * Copyright 2008 MontaVista Software, Inc.
-+ * Copyright 2008,2010 Anton Vorontsov <cbouatmailru@gmail.com>
++ * Original Copyright 2008 MontaVista Software, Inc.
++ * Original Copyright 2008,2010 Anton Vorontsov <cbouatmailru@gmail.com>
 + *
 + * This program is free software; you can redistribute  it and/or modify it
 + * under  the terms of  the GNU General  Public License as published by the
