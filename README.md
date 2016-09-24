@@ -18,4 +18,43 @@ Other notes:
   * It has been on the order of a decade since I've done any real kernel work. Don't use anything here as a model on how to do, well, anything. I will glady accept corrections, complaints, or improvements!
   * Also, if this code blows up and reformats your house, don't blame me. Use at your own risk!
 
+Usage examples, once modules are loaded:
+
+```
+# Turn error light on
+$ echo 1 > /sys/class/leds/net6501:red:error/brightness
+
+# Make error light heartbeat
+$ modprobe ledtrig-heartbeat
+$ echo heartbeat > /sys/class/leds/net6501:red:error/trigger
+
+# Our generic GPIO handler
+$ cat /sys/class/gpio/gpiochip240/label
+basic-ioport-gpio
+
+# Number of GPIO lines
+$ cat /sys/class/gpio/gpiochip240/ngpio
+16
+
+# Export a GPIO line (will create /sys/class/gpio/gpioN
+$ echo 240 > /sys/class/gpio/export
+
+$ cat /sys/class/gpio/gpio240/direction
+in
+
+# I think these may have a weak pullup on them, since the value reads '1'
+# even when nothing is connected, and my meter reads ~3.25v
+$ cat /sys/class/gpio/gpio240/value
+1
+
+$ echo out > /sys/class/gpio/gpio240/direction
+
+# Meter reads 0v after this
+$ cat /sys/class/gpio/gpio240/value
+0
+
+# Meter reads 3.25v after this
+$ echo 1 > /sys/class/gpio/gpio240/value
+```
+
 Comments/complaints/recommendations for good heavy metal to: J. Grizzard <jg-github@lupine.org>
