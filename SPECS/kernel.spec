@@ -12,9 +12,9 @@ Summary: The Linux kernel
 %global distro_build 327
 
 %define rpmversion 3.10.0
-%define pkgrelease 327.36.1.el7
+%define pkgrelease 327.36.3.el7
 
-%define wwpbuild 2
+%define wwpbuild 1
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
@@ -1551,13 +1551,9 @@ fi
 %kernel_variant_files %{with_kdump} kdump
 
 %changelog
-* Mon Sep 05 2016 <wwp@lupine.org> - 3.10.0-327.28.2.2.el7
+* Sat Nov  5 2016 <wwp@lupine.org> - 3.10.0-327.36.3.el7
+- Update to latest kernel
+
+* Mon Sep  5 2016 <wwp@lupine.org> - 3.10.0-327.28.2.2.el7
 - Initial build for Soekris net6501 hardware
 - Please see upstream kernel for complete patch notes
-
-###
-# The following Emacs magic makes C-c C-e use UTC dates.
-# Local Variables:
-# rpm-change-log-uses-utc: t
-# End:
-###
