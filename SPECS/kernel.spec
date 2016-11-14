@@ -3,7 +3,7 @@
 
 Summary: The Linux kernel
 
-%define buildid .wwp_soekris
+%define buildid .wwp_apu2
 
 # For a kernel released for public testing, released_kernel should be 1.
 # For internal testing builds during development, it should be 0.
@@ -14,7 +14,7 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.36.3.el7
 
-%define wwpbuild 2
+%define wwpbuild 1
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
@@ -383,9 +383,9 @@ Patch999999: linux-kernel-test.patch
 Patch1000: debrand-single-cpu.patch
 Patch1001: debrand-rh_taint.patch
 Patch1002: debrand-rh-i686-cpu.patch
-Patch9001: e6xx-force-hpet.patch
+# Patch9001: e6xx-force-hpet.patch
 # Patch9002: soekris-net6501-leds.patch
-Patch9003: soekris-net6501.patch
+# Patch9003: soekris-net6501.patch
 
 BuildRoot: %{_tmppath}/kernel-%{KVRA}-root
 
@@ -697,9 +697,9 @@ ApplyOptionalPatch linux-kernel-test.patch
 ApplyOptionalPatch debrand-single-cpu.patch
 ApplyOptionalPatch debrand-rh_taint.patch
 ApplyOptionalPatch debrand-rh-i686-cpu.patch
-ApplyOptionalPatch e6xx-force-hpet.patch
+# ApplyOptionalPatch e6xx-force-hpet.patch
 # ApplyOptionalPatch soekris-net6501-leds.patch
-ApplyOptionalPatch soekris-net6501.patch
+# ApplyOptionalPatch soekris-net6501.patch
 
 # Any further pre-build tree manipulations happen here.
 
