@@ -14,7 +14,7 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.36.3.el7
 
-%define wwpbuild 4
+%define wwpbuild 5
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
@@ -385,6 +385,7 @@ Patch1001: debrand-rh_taint.patch
 Patch1002: debrand-rh-i686-cpu.patch
 Patch9001: apu2-leds.patch
 Patch9002: apu2-nct5104d.patch
+Patch9003: apu2-i2c-piix4.patch
 
 BuildRoot: %{_tmppath}/kernel-%{KVRA}-root
 
@@ -698,6 +699,7 @@ ApplyOptionalPatch debrand-rh_taint.patch
 ApplyOptionalPatch debrand-rh-i686-cpu.patch
 ApplyOptionalPatch apu2-leds.patch
 ApplyOptionalPatch apu2-nct5104d.patch
+ApplyOptionalPatch apu2-i2c-piix4.patch
 
 # Any further pre-build tree manipulations happen here.
 
