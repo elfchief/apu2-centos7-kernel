@@ -14,7 +14,7 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.36.3.el7
 
-%define wwpbuild 5
+%define wwpbuild 6
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
