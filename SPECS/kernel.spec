@@ -378,6 +378,9 @@ Source72: kernel-%{version}-s390x-kdump.config
 Source2000: cpupower.service
 Source2001: cpupower.config
 
+# Automatically load apu2 modules
+Source9000: apu2-modules.conf
+
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
 Patch1000: debrand-single-cpu.patch
@@ -1282,6 +1285,10 @@ mkdir -p $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/%{rpmversion}-%{pkgrelease}
 install -m 0644 %{SOURCE13} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/%{rpmversion}-%{pkgrelease}/kernel-signing-ca.cer
 %endif
 
+# module config for apu2
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d
+install -m 0644 %{SOURCE9000} $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d/apu2.conf
+
 ###
 ### clean
 ###
@@ -1534,6 +1541,7 @@ fi
 %endif\
 /lib/modules/%{KVRA}%{?2:.%{2}}/modules.*\
 %ghost /boot/initramfs-%{KVRA}%{?2:.%{2}}.img\
+%config(noreplace) %{_sysconfdir}/modules-load.d/apu2.conf\
 %{expand:%%files %{?2:%{2}-}devel}\
 %defattr(-,root,root)\
 /usr/src/kernels/%{KVRA}%{?2:.%{2}}\
