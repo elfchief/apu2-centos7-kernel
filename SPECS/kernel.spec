@@ -14,7 +14,7 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.36.3.el7
 
-%define wwpbuild 7
+%define wwpbuild 8
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
@@ -1287,10 +1287,6 @@ mkdir -p $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/%{rpmversion}-%{pkgrelease}
 install -m 0644 %{SOURCE13} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/%{rpmversion}-%{pkgrelease}/kernel-signing-ca.cer
 %endif
 
-# module config for apu2
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d
-install -m 0644 %{SOURCE9001} $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d/apu2.conf
-
 ###
 ### clean
 ###
@@ -1361,6 +1357,15 @@ fi}\
 %{expand:\
 %{_sbindir}/new-kernel-pkg --package kernel%{?-v:-%{-v*}} --install %{KVRA}%{?-v:.%{-v*}} || exit $?\
 }\
+if [ ! -f %{_sysconfdir}/modules-load.d/apu2.conf ]; then\
+    cat <<EOF > %{_sysconfdir}/modules-load.d/apu2.conf\
+i2c-piix4\
+i2c-dev\
+gpio-nct5104d\
+leds-apu2\
+sp5100_tco\
+EOF\
+fi\
 %{nil}
 
 #
@@ -1543,7 +1548,6 @@ fi
 %endif\
 /lib/modules/%{KVRA}%{?2:.%{2}}/modules.*\
 %ghost /boot/initramfs-%{KVRA}%{?2:.%{2}}.img\
-%config(noreplace) %{_sysconfdir}/modules-load.d/apu2.conf\
 %{expand:%%files %{?2:%{2}-}devel}\
 %defattr(-,root,root)\
 /usr/src/kernels/%{KVRA}%{?2:.%{2}}\
