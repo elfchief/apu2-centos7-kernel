@@ -14,7 +14,7 @@ Summary: The Linux kernel
 %define rpmversion 3.10.0
 %define pkgrelease 327.36.3.el7
 
-%define wwpbuild 6
+%define wwpbuild 7
 %define pkgrelease_local %(echo %{pkgrelease} | sed 's/\.el7$/.%{wwpbuild}.el7/')
 %define pkg_release %{pkgrelease_local}%{?buildid}
 %global run_oldconfig 0
@@ -379,7 +379,7 @@ Source2000: cpupower.service
 Source2001: cpupower.config
 
 # Automatically load apu2 modules
-Source9000: apu2-modules.conf
+Source9001: apu2-modules.conf
 
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
@@ -389,6 +389,7 @@ Patch1002: debrand-rh-i686-cpu.patch
 Patch9001: apu2-leds.patch
 Patch9002: apu2-nct5104d.patch
 Patch9003: apu2-i2c-piix4.patch
+Patch9004: apu2-sp5100_tco.patch
 
 BuildRoot: %{_tmppath}/kernel-%{KVRA}-root
 
@@ -703,6 +704,7 @@ ApplyOptionalPatch debrand-rh-i686-cpu.patch
 ApplyOptionalPatch apu2-leds.patch
 ApplyOptionalPatch apu2-nct5104d.patch
 ApplyOptionalPatch apu2-i2c-piix4.patch
+ApplyOptionalPatch apu2-sp5100_tco.patch
 
 # Any further pre-build tree manipulations happen here.
 
@@ -1287,7 +1289,7 @@ install -m 0644 %{SOURCE13} $RPM_BUILD_ROOT%{_datadir}/doc/kernel-keys/%{rpmvers
 
 # module config for apu2
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d
-install -m 0644 %{SOURCE9000} $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d/apu2.conf
+install -m 0644 %{SOURCE9001} $RPM_BUILD_ROOT%{_sysconfdir}/modules-load.d/apu2.conf
 
 ###
 ### clean
