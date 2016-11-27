@@ -378,9 +378,6 @@ Source72: kernel-%{version}-s390x-kdump.config
 Source2000: cpupower.service
 Source2001: cpupower.config
 
-# Automatically load apu2 modules
-Source9001: apu2-modules.conf
-
 # empty final patch to facilitate testing of kernel patches
 Patch999999: linux-kernel-test.patch
 Patch1000: debrand-single-cpu.patch
