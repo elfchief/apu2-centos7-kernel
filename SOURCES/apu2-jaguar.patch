@@ -1,0 +1,54 @@
+diff -Naur linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64.orig/arch/x86/Kconfig.cpu linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64/arch/x86/Kconfig.cpu
+--- linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64.orig/arch/x86/Kconfig.cpu	2016-10-20 06:43:21.000000000 +0000
++++ linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64/arch/x86/Kconfig.cpu	2016-11-27 03:02:01.497215185 +0000
+@@ -269,6 +269,13 @@
+ 	  accordingly optimized code. Use a recent GCC with specific Atom
+ 	  support in order to fully benefit from selecting this option.
+ 
++config MJAGUAR
++	bool "AMD Jaguar"
++	---help---
++
++	  Select this for AMD Jaguar processors. The Jaguar family represents
++	  portable/low-power processors of family 16h.
++
+ config GENERIC_CPU
+ 	bool "Generic-x86-64"
+ 	depends on X86_64
+diff -Naur linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64.orig/arch/x86/Makefile linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64/arch/x86/Makefile
+--- linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64.orig/arch/x86/Makefile	2016-10-20 06:43:21.000000000 +0000
++++ linux-3.10.0-327.36.3.8.el7.wwp_apu2.x86_64/arch/x86/Makefile	2016-11-27 02:58:23.738251669 +0000
+@@ -74,6 +74,8 @@
+                 $(call cc-option,-march=core2,$(call cc-option,-mtune=generic))
+ 	cflags-$(CONFIG_MATOM) += $(call cc-option,-march=atom) \
+ 		$(call cc-option,-mtune=atom,$(call cc-option,-mtune=generic))
++	cflags-$(CONFIG_MJAGUAR) += $(call cc-option,-march=btver2) \
++		$(call cc-option,-mtune=btver2,$(call cc-option,-mtune=generic))
+         cflags-$(CONFIG_GENERIC_CPU) += $(call cc-option,-mtune=generic)
+         KBUILD_CFLAGS += $(cflags-y)
+ 
+--- linux-3.10.0-327.36.3.9.el7.wwp_apu2.x86_64.orig/arch/x86/Kconfig.cpu	2016-11-27 03:54:19.469855787 +0000
++++ linux-3.10.0-327.36.3.9.el7.wwp_apu2.x86_64/arch/x86/Kconfig.cpu	2016-11-27 04:33:38.726607614 +0000
+@@ -307,7 +307,7 @@
+ config X86_L1_CACHE_SHIFT
+ 	int
+ 	default "7" if MPENTIUM4 || MPSC
+-	default "6" if MK7 || MK8 || MPENTIUMM || MCORE2 || MATOM || MVIAC7 || X86_GENERIC || GENERIC_CPU
++	default "6" if MK7 || MK8 || MJAGUAR || MPENTIUMM || MCORE2 || MATOM || MVIAC7 || X86_GENERIC || GENERIC_CPU
+ 	default "4" if MELAN || M486 || MGEODEGX1
+ 	default "5" if MWINCHIP3D || MWINCHIPC6 || MCRUSOE || MEFFICEON || MCYRIXIII || MK6 || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || M586 || MVIAC3_2 || MGEODE_LX
+ 
+@@ -338,11 +338,11 @@
+ 
+ config X86_INTEL_USERCOPY
+ 	def_bool y
+-	depends on MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M586MMX || X86_GENERIC || MK8 || MK7 || MEFFICEON || MCORE2
++	depends on MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M586MMX || X86_GENERIC || MK8 || MK7 || MJAGUAR || MEFFICEON || MCORE2
+ 
+ config X86_USE_PPRO_CHECKSUM
+ 	def_bool y
+-	depends on MWINCHIP3D || MWINCHIPC6 || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || MK8 || MVIAC3_2 || MVIAC7 || MEFFICEON || MGEODE_LX || MCORE2 || MATOM
++	depends on MWINCHIP3D || MWINCHIPC6 || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || MK8 || MJAGUAR || MVIAC3_2 || MVIAC7 || MEFFICEON || MGEODE_LX || MCORE2 || MATOM
+ 
+ config X86_USE_3DNOW
+ 	def_bool y
