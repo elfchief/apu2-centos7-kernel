@@ -25,208 +25,378 @@ diff -Naur linux-3.10.0-327.36.3.2.el7.wwp_apu2.x86_64.orig/drivers/leds/Makefil
  obj-$(CONFIG_LEDS_WRAP)			+= leds-wrap.o
  obj-$(CONFIG_LEDS_COBALT_QUBE)		+= leds-cobalt-qube.o
  obj-$(CONFIG_LEDS_COBALT_RAQ)		+= leds-cobalt-raq.o
-diff -Naur linux-3.10.0-327.36.3.2.el7.wwp_apu2.x86_64.orig/drivers/leds/leds-apu2.c linux-3.10.0-327.36.3.2.el7.wwp_apu2.x86_64/drivers/leds/leds-apu2.c
---- linux-3.10.0-327.36.3.2.el7.wwp_apu2.x86_64.orig/drivers/leds/leds-apu2.c	1970-01-01 00:00:00.000000000 +0000
-+++ linux-3.10.0-327.36.3.2.el7.wwp_apu2.x86_64/drivers/leds/leds-apu2.c	2016-11-18 03:33:58.824664808 +0000
-@@ -0,0 +1,201 @@
+diff -Naur linux-3.10.0-327.36.3.11.el7.wwp_apu2.x86_64.orig/drivers/leds/leds-apu2.c linux-3.10.0-327.36.3.11.el7.wwp_apu2.x86_64/drivers/leds/leds-apu2.c
+--- linux-3.10.0-327.36.3.11.el7.wwp_apu2.x86_64.orig/drivers/leds/leds-apu2.c	1970-01-01 00:00:00.000000000 +0000
++++ linux-3.10.0-327.36.3.11.el7.wwp_apu2.x86_64/drivers/leds/leds-apu2.c	2016-11-30 01:05:13.084308572 +0000
+@@ -0,0 +1,371 @@
 +/*
-+ * LEDs driver for PCEngines apu2
++ *  APU2 LED/GPIO Driver
++ *  Copyright (c) 2016 Christian Lamparter <chunkeey (at) googlemail.com>
 + *
-+ * Copyright (C) 2016 Christian Herzog <daduke@daduke.org>, based on
-+ * Petr Leibman's leds-alix
-+ * Based on leds-wrap.c
++ *  Based on gpio-apu2.c - AMD FCH GPIO support for PC-Engines APU-2 board
 + *
++ *  Copyright (c) 2015  Carsten Spiess <fli4l at carsten-spiess.de>
 + *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program; if not, write to the Free Software
++ *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + */
 +
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+#include <linux/init.h>
-+#include <linux/platform_device.h>
-+#include <linux/leds.h>
-+#include <linux/err.h>
-+#include <asm/io.h>
-+#include <linux/io.h>
++ #include <linux/module.h>
++ #include <linux/types.h>
++ #include <linux/miscdevice.h>
++ #include <linux/gpio.h>
++ #include <linux/init.h>
++ #include <linux/pci.h>
++ #include <linux/ioport.h>
++ #include <linux/platform_device.h>
++ #include <linux/uaccess.h>
++ #include <linux/io.h>
++ #include <linux/version.h>
++ #include <linux/dmi.h>
 +
-+#define DRVNAME		"apu2-led"
++ #include <linux/leds.h>
++ #include <linux/input.h>
++ #include <linux/gpio_keys.h>
 +
-+#define FCH_ACPI_MMIO_BASE      0xFED80000
-+#define FCH_GPIO_BASE           (FCH_ACPI_MMIO_BASE + 0x1500)
-+#define FCH_GPIO_SIZE           0x300
-+#define GPIO_BIT_WRITE          22
-+static DEFINE_SPINLOCK ( gpio_lock);
++ #define DEVNAME                 "gpio-apu2"
 +
-+#define APU2_NUM_GPIO            4
-+static u8 gpio_offset[APU2_NUM_GPIO] = {89, 68, 69, 70};
++ #define FCH_ACPI_MMIO_BASE      0xFED80000
++ #define FCH_GPIO_BASE           (FCH_ACPI_MMIO_BASE + 0x1500)
++ #define FCH_GPIO_SIZE           0x300
 +
-+static void __iomem *gpio_addr[APU2_NUM_GPIO] = {NULL, NULL, NULL, NULL};
++ #define APU_NUM_GPIO            4
 +
-+static struct platform_device *pdev;
++ #define GPIO_BIT_DIR            23
++ #define GPIO_BIT_WRITE          22
++ #define GPIO_BIT_READ           16
 +
-+static void apu2_led_set_1(struct led_classdev *led_cdev, enum led_brightness value) {
-+	u32 val;
++ /* internal variables */
++ static struct pci_dev *gpio_apu2_pci;
++ static DEFINE_SPINLOCK ( gpio_lock);
 +
-+	spin_lock_bh (&gpio_lock);
++ /* the watchdog platform device */
++ static struct platform_device *gpio_apu2_platform_device;
++ static struct platform_device *leddev;
++ static struct platform_device *keydev;
 +
-+	val = ioread32 (gpio_addr[1]);
++ static const struct pci_device_id gpio_apu2_pci_tbl[] ={
++ 	{PCI_VENDOR_ID_AMD, PCI_DEVICE_ID_AMD_HUDSON2_SMBUS, PCI_ANY_ID, PCI_ANY_ID},
++ 	{ 0, } /* End of list */
++ };
++ MODULE_DEVICE_TABLE ( pci, gpio_apu2_pci_tbl);
 +
-+	if (value)
-+		val &= ~BIT(GPIO_BIT_WRITE);
-+	else
-+		val |= BIT(GPIO_BIT_WRITE);
++ /* EGPIO89=GPIO32, AGPIO68=GPIO57, AGPIO69=GPIO58, AGPIO70=GPIO59 */
++ static u8 gpio_offset[APU_NUM_GPIO] = {89, 68, 69, 70};
 +
-+	iowrite32 (val, gpio_addr[1]);
++ static void __iomem *gpio_addr[APU_NUM_GPIO] = {NULL, NULL, NULL, NULL};
 +
-+	spin_unlock_bh (&gpio_lock);
-+}
++ static int gpio_apu2_get_dir (struct gpio_chip *chip, unsigned offset)
++ {
++ 	u32 val;
 +
-+static void apu2_led_set_2(struct led_classdev *led_cdev, enum led_brightness value) {
-+	u32 val;
++ 	val = ~ioread32 (gpio_addr[offset]);
 +
-+	spin_lock_bh (&gpio_lock);
++ 	return (val >> GPIO_BIT_DIR) & 1;
++ }
 +
-+	val = ioread32 (gpio_addr[2]);
++ static int gpio_apu2_dir_in (struct gpio_chip *gc, unsigned offset)
++ {
++ 	u32 val;
 +
-+	if (value)
-+		val &= ~BIT(GPIO_BIT_WRITE);
-+	else
-+		val |= BIT(GPIO_BIT_WRITE);
++ 	spin_lock_bh (&gpio_lock);
 +
-+	iowrite32 (val, gpio_addr[2]);
++ 	val = ioread32 (gpio_addr[offset]);
++ 	val &= ~BIT(GPIO_BIT_DIR);
++ 	iowrite32 (val, gpio_addr[offset]);
 +
-+	spin_unlock_bh (&gpio_lock);
-+}
++ 	spin_unlock_bh (&gpio_lock);
 +
-+static void apu2_led_set_3(struct led_classdev *led_cdev, enum led_brightness value) {
-+	u32 val;
++ 	return 0;
++ }
 +
-+	spin_lock_bh (&gpio_lock);
++ static int gpio_apu2_dir_out (struct gpio_chip *chip, unsigned offset,
++ 		int value)
++ {
++ 	u32 val;
 +
-+	val = ioread32 (gpio_addr[3]);
++ 	spin_lock_bh (&gpio_lock);
 +
-+	if (value)
-+		val &= ~BIT(GPIO_BIT_WRITE);
-+	else
-+		val |= BIT(GPIO_BIT_WRITE);
++ 	val = ioread32 (gpio_addr[offset]);
++ 	val |= BIT(GPIO_BIT_DIR);
++ 	iowrite32 (val, gpio_addr[offset]);
 +
-+	iowrite32 (val, gpio_addr[3]);
++ 	spin_unlock_bh (&gpio_lock);
 +
-+	spin_unlock_bh (&gpio_lock);
-+}
++ 	return 0;
++ }
 +
-+static struct led_classdev apu2_led_1 = {
-+	.name		= "apu2:1",
-+	.brightness_set	= apu2_led_set_1,
-+};
++ static int gpio_apu2_get_data (struct gpio_chip *chip, unsigned offset)
++ {
++ 	u32 val;
 +
-+static struct led_classdev apu2_led_2 = {
-+	.name		= "apu2:2",
-+	.brightness_set	= apu2_led_set_2,
-+};
++ 	val = ioread32 (gpio_addr[offset]);
 +
-+static struct led_classdev apu2_led_3 = {
-+	.name		= "apu2:3",
-+	.brightness_set	= apu2_led_set_3,
-+};
++ 	return (val >> GPIO_BIT_READ) & 1;
++ }
 +
-+#ifdef CONFIG_PM
-+static int apu2_led_suspend(struct platform_device *dev,
-+		pm_message_t state)
-+{
-+	led_classdev_suspend(&apu2_led_1);
-+	led_classdev_suspend(&apu2_led_2);
-+	led_classdev_suspend(&apu2_led_3);
-+	return 0;
-+}
++ static void gpio_apu2_set_data (struct gpio_chip *chip, unsigned offset, int value)
++ {
++ 	u32 val;
 +
-+static int apu2_led_resume(struct platform_device *dev)
-+{
-+	led_classdev_resume(&apu2_led_1);
-+	led_classdev_resume(&apu2_led_2);
-+	led_classdev_resume(&apu2_led_3);
-+	return 0;
-+}
-+#else
-+#define apu2_led_suspend NULL
-+#define apu2_led_resume NULL
-+#endif
++ 	spin_lock_bh (&gpio_lock);
 +
-+static int apu2_led_probe(struct platform_device *pdev)
-+{
-+	int ret;
++ 	val = ioread32 (gpio_addr[offset]);
 +
-+	ret = led_classdev_register(&pdev->dev, &apu2_led_1);
-+	if (ret == 0)
-+	{
-+		ret = led_classdev_register(&pdev->dev, &apu2_led_2);
-+		if (ret >= 0)
-+		{
-+			ret = led_classdev_register(&pdev->dev, &apu2_led_3);
-+			if (ret < 0)
-+				led_classdev_unregister(&apu2_led_2);
-+		}
-+		if (ret < 0)
-+			led_classdev_unregister(&apu2_led_1);
-+	}
-+	return ret;
-+}
++ 	if (value)
++ 		val |= BIT(GPIO_BIT_WRITE);
++ 	else
++ 		val &= ~BIT(GPIO_BIT_WRITE);
 +
-+static int apu2_led_remove(struct platform_device *pdev)
-+{
-+	led_classdev_unregister(&apu2_led_1);
-+	led_classdev_unregister(&apu2_led_2);
-+	led_classdev_unregister(&apu2_led_3);
-+	
-+	return 0;
-+}
++ 	iowrite32 (val, gpio_addr[offset]);
 +
-+static struct platform_driver apu2_led_driver = {
-+	.probe		= apu2_led_probe,
-+	.remove		= apu2_led_remove,
-+	.suspend	= apu2_led_suspend,
-+	.resume		= apu2_led_resume,
-+	.driver		= {
-+	.name		= DRVNAME,
-+	.owner		= THIS_MODULE,
-+	},
-+};
++ 	spin_unlock_bh (&gpio_lock);
++ }
 +
-+static int __init apu2_led_init(void)
-+{
-+	int ret;
-+	int i;
++ static struct gpio_chip gpio_apu2_chip = {
++ 	.label = DEVNAME,
++ 	.owner = THIS_MODULE,
++ 	.base = -1,
++ 	.ngpio = APU_NUM_GPIO,
++ 	.get_direction = gpio_apu2_get_dir,
++ 	.direction_input = gpio_apu2_dir_in,
++ 	.direction_output = gpio_apu2_dir_out,
++ 	.get = gpio_apu2_get_data,
++ 	.set = gpio_apu2_set_data,
++ };
 +
-+	ret = platform_driver_register(&apu2_led_driver);
-+	if (ret < 0)
-+		goto out;
++ /*
++  *
++  */
++ static int gpio_apu2_probe (struct platform_device *dev)
++ {
++ 	int ret = 0;
++ 	int i;
++ 	struct pci_dev *pci_dev = NULL;
 +
-+	pdev = platform_device_register_simple(DRVNAME, -1, NULL, 0);
-+	if (IS_ERR(pdev)) {
-+		ret = PTR_ERR(pdev);
-+		platform_driver_unregister(&apu2_led_driver);
-+		goto out;
++	/* Match the device name/model */
++	if (!dmi_match(DMI_BOARD_VENDOR, "PC Engines") || !dmi_match(DMI_BOARD_NAME, "apu2")) {
++		pr_err ("%s: APU2 board not detected! Found: %s (vendor), %s (board name)\n", DEVNAME, dmi_get_system_info(DMI_BOARD_VENDOR), dmi_get_system_info(DMI_BOARD_NAME));
++		return -EACCES;
 +	}
 +
-+	for (i = 0; i < APU2_NUM_GPIO; i++) {
-+		gpio_addr[i] = ioremap ( FCH_GPIO_BASE + (gpio_offset[i] * sizeof (u32)), sizeof (u32));
-+	}
++ 	/* Match the PCI device */
++ 	for_each_pci_dev (pci_dev) {
++ 		if (pci_match_id (gpio_apu2_pci_tbl, pci_dev) != NULL) {
++ 			gpio_apu2_pci = pci_dev;
++ 			break;
++ 		}
++ 	}
 +
-+out:
-+	return ret;
-+}
++ 	if (!gpio_apu2_pci)
++ 		return -ENODEV;
 +
-+static void __exit apu2_led_exit(void)
-+{
-+	platform_device_unregister(pdev);
-+	platform_driver_unregister(&apu2_led_driver);
-+}
++ 	pr_info ("%s: PCI Revision ID: 0x%x\n", DEVNAME, gpio_apu2_pci->revision);
 +
-+module_init(apu2_led_init);
-+module_exit(apu2_led_exit);
++ 	/* Determine type of southbridge chipset */
++ 	if (gpio_apu2_pci->revision < 0x40) {
++ 		return -EACCES;
++ 	}
 +
-+MODULE_AUTHOR("Christian Herzog");
-+MODULE_DESCRIPTION("PCEngines apu2 LED driver");
-+MODULE_LICENSE("GPL");
++ 	/* Request memory region for GPIO's */
++ 	if (!devm_request_mem_region (&dev->dev, FCH_GPIO_BASE,
++ 		FCH_GPIO_SIZE, DEVNAME)){
++ 		pr_err ("%s: request GPIO mem region failed\n", DEVNAME);
++ 		return -ENXIO;
++ 	}
++
++ 	/* Map IO's for GPIO's */
++ 	for (i = 0; i < APU_NUM_GPIO; i++) {
++ 		gpio_addr[i] = devm_ioremap (&dev->dev,
++ 			FCH_GPIO_BASE + (gpio_offset[i] * sizeof (u32)), sizeof (u32));
++ 		if (!gpio_addr[i]) {
++ 			pr_err ("%s: map GPIO%d address failed\n", DEVNAME, gpio_offset[i]);
++ 			return -ENXIO;
++ 		}
++ 	}
++
++ 	gpio_apu2_chip.dev = &dev->dev;
++ 	ret = gpiochip_add (&gpio_apu2_chip);
++ 	if (ret) {
++ 		pr_err ("%s: adding gpiochip failed\n", DEVNAME);
++ 	}
++
++ 	return ret;
++ }
++
++ static int gpio_apu2_remove (struct platform_device *dev)
++ {
++ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
++ 	int ret;
++ 	ret = gpiochip_remove (&gpio_apu2_chip);
++ #else /* LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) */
++ 	gpiochip_remove (&gpio_apu2_chip);
++ #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) */
++ 	return 0;
++ }
++
++ static struct platform_driver gpio_apu2_driver = {
++ 	.probe = gpio_apu2_probe,
++ 	.remove = gpio_apu2_remove,
++ 	.driver = {
++ 		.owner = THIS_MODULE,
++ 		.name = DEVNAME
++ 	}
++ };
++
++ static struct gpio_led apu2_leds_gpio[] = {
++         {
++                 .name           = "apu2:green:power",
++                 .gpio           = 253,
++                 .active_low     = 1,
++         },
++         {
++                 .name           = "apu2:green:led2",
++                 .gpio           = 254,
++                 .active_low     = 1,
++         },
++         {
++                 .name           = "apu2:green:led3",
++                 .gpio           = 255,
++                 .active_low     = 1,
++         },
++ };
++
++ static struct gpio_keys_button apu2_gpio_keys[] = {
++ 	{
++ 		.desc           = "Reset button",
++ 		.type           = EV_KEY,
++ 		.code           = KEY_RESTART,
++ 		.debounce_interval = 60,
++ 		.gpio           = 508,
++ 		.active_low     = 1,
++ 	},
++ };
++
++ static void register_gpio_keys_polled(int id, unsigned poll_interval,
++ 				      unsigned nbuttons,
++ 				      struct gpio_keys_button *buttons)
++ {
++ 	struct gpio_keys_platform_data pdata = { };
++ 	int err;
++
++ 	keydev = platform_device_alloc("gpio-keys-polled", id);
++ 	if (!keydev) {
++ 		printk(KERN_ERR "Failed to allocate gpio-keys platform device\n");
++ 		return;
++ 	}
++
++ 	pdata.poll_interval = poll_interval;
++ 	pdata.nbuttons = nbuttons;
++ 	pdata.buttons = buttons;
++
++ 	err = platform_device_add_data(keydev, &pdata, sizeof(pdata));
++ 	if (err) {
++ 		dev_err(&keydev->dev, "failed to add platform data to key driver (%d)", err);
++ 		goto err_put_pdev;
++ 	}
++
++ 	err = platform_device_add(keydev);
++ 	if (err) {
++ 		dev_err(&keydev->dev, "failed to register key platform device (%d)", err);
++ 		goto err_put_pdev;
++ 	}
++
++ 	return;
++
++ err_put_pdev:
++ 	platform_device_put(keydev);
++ 	keydev = NULL;
++ }
++
++ static void register_leds_gpio(int id, unsigned num_leds, struct gpio_led *leds)
++ {
++ 	struct gpio_led_platform_data pdata = { };
++ 	int err;
++
++ 	leddev = platform_device_alloc("leds-gpio", id);
++ 	if (!leddev) {
++ 		printk(KERN_ERR "Failed to allocate leds-gpio platform device\n");
++ 		return;
++ 	}
++
++ 	pdata.num_leds = num_leds;
++ 	pdata.leds = leds;
++
++ 	err = platform_device_add_data(leddev, &pdata, sizeof(pdata));
++ 	if (err) {
++ 		dev_err(&leddev->dev, "failed to add platform data to key driver (%d)", err);
++ 		goto err_put_pdev;
++ 	}
++
++ 	err = platform_device_add(leddev);
++ 	if (err) {
++ 		dev_err(&leddev->dev, "failed to register key platform device (%d)", err);
++ 		goto err_put_pdev;
++ 	}
++
++ 	return;
++
++ err_put_pdev:
++ 	platform_device_put(leddev);
++ 	leddev = NULL;
++ }
++
++ static int __init gpio_apu2_init (void)
++ {
++ 	int err;
++
++ 	pr_info ("%s: load APU2/LED GPIO driver module\n", DEVNAME);
++
++ 	err = platform_driver_register (&gpio_apu2_driver);
++ 	if (err)
++ 		goto exit;
++
++ 	gpio_apu2_platform_device = platform_device_register_simple (DEVNAME, -1, NULL, 0);
++ 	if (IS_ERR(gpio_apu2_platform_device)) {
++ 		err = PTR_ERR(gpio_apu2_platform_device);
++ 		goto exit_driver;
++ 	}
++
++ 	pr_info ("%s: APU2 GPIO/LED driver module loaded\n", DEVNAME);
++
++ 	register_leds_gpio(-1, ARRAY_SIZE(apu2_leds_gpio), apu2_leds_gpio);
++ 	register_gpio_keys_polled(-1, 20, ARRAY_SIZE(apu2_gpio_keys), apu2_gpio_keys);
++ 	return 0;
++
++ exit_driver:
++ 	platform_driver_unregister (&gpio_apu2_driver);
++ exit:
++ 	return err;
++ }
++
++ static void __exit gpio_apu2_exit (void)
++ {
++ 	platform_device_unregister (gpio_apu2_platform_device);
++ 	platform_device_unregister (leddev);
++ 	platform_device_unregister (keydev);
++ 	platform_driver_unregister (&gpio_apu2_driver);
++ 	pr_info ("%s: APU2 GPIO/LED driver module unloaded\n", DEVNAME);
++ }
++
++ MODULE_AUTHOR ("Carsten Spiess <fli4l at carsten-spiess.de>");
++ MODULE_DESCRIPTION("GPIO driver for AMD FCH on PC-Engines APU-2");
++ MODULE_LICENSE("GPL");
++
++ module_init (gpio_apu2_init);
++ module_exit (gpio_apu2_exit);
